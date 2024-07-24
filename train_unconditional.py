@@ -89,7 +89,7 @@ def parse_args():
     parser.add_argument(
         "--output_dir",
         type=str,
-        default="ddpm-model-64",
+        default="ddpm-model-256",
         help="The output directory where the model predictions and checkpoints will be written.",
     )
     parser.add_argument("--overwrite_output_dir", action="store_true")
@@ -102,7 +102,7 @@ def parse_args():
     parser.add_argument(
         "--resolution",
         type=int,
-        default=64,
+        default=256,
         help=(
             "The resolution for input images, all the images in the train/validation dataset will be resized to this"
             " resolution"
@@ -124,21 +124,21 @@ def parse_args():
         help="whether to randomly flip images horizontally",
     )
     parser.add_argument(
-        "--train_batch_size", type=int, default=16, help="Batch size (per device) for the training dataloader."
+        "--train_batch_size", type=int, default=20, help="Batch size (per device) for the training dataloader."
     )
     parser.add_argument(
-        "--eval_batch_size", type=int, default=16, help="The number of images to generate for evaluation."
+        "--eval_batch_size", type=int, default=10, help="The number of images to generate for evaluation."
     )
     parser.add_argument(
         "--dataloader_num_workers",
         type=int,
-        default=0,
+        default=4,
         help=(
             "The number of subprocesses to use for data loading. 0 means that the data will be loaded in the main"
             " process."
         ),
     )
-    parser.add_argument("--num_epochs", type=int, default=100)
+    parser.add_argument("--num_epochs", type=int, default=50)
     parser.add_argument("--save_images_epochs", type=int, default=10, help="How often to save images during training.")
     parser.add_argument(
         "--save_model_epochs", type=int, default=10, help="How often to save the model during training."
@@ -230,8 +230,8 @@ def parse_args():
         choices=["epsilon", "sample"],
         help="Whether the model should predict the 'epsilon'/noise error or directly the reconstructed image 'x0'.",
     )
-    parser.add_argument("--ddpm_num_steps", type=int, default=1000)
-    parser.add_argument("--ddpm_num_inference_steps", type=int, default=1000)
+    parser.add_argument("--ddpm_num_steps", type=int, default=500)
+    parser.add_argument("--ddpm_num_inference_steps", type=int, default=500)
     parser.add_argument("--ddpm_beta_schedule", type=str, default="linear")
     parser.add_argument(
         "--checkpointing_steps",
@@ -356,18 +356,20 @@ def main(args):
     # Initialize the model
     if args.model_config_name_or_path is None:
         model = UNet2DModel(
-            sample_size=args.resolution,
+            sample_size=256,
             in_channels=1,
             out_channels=1,
             layers_per_block=2,
-            block_out_channels=(128, 128, 256, 256, 512, 512),
+            block_out_channels=(64, 64, 128, 128, 256, 256, 512, 512),
             down_block_types=(
                 "DownBlock2D",
                 "DownBlock2D",
                 "DownBlock2D",
                 "DownBlock2D",
-                "AttnDownBlock2D",
                 "DownBlock2D",
+                "DownBlock2D",
+                "AttnDownBlock2D",
+                "DownBlock2D"
             ),
             up_block_types=(
                 "UpBlock2D",
@@ -376,6 +378,8 @@ def main(args):
                 "UpBlock2D",
                 "UpBlock2D",
                 "UpBlock2D",
+                "UpBlock2D",
+                "UpBlock2D"
             ),
         )
     else:
@@ -419,9 +423,9 @@ def main(args):
     accepts_prediction_type = "prediction_type" in set(inspect.signature(DDPMScheduler.__init__).parameters.keys())
     if accepts_prediction_type:
         noise_scheduler = DDPMScheduler(
-            num_train_timesteps=args.ddpm_num_steps,
-            beta_schedule=args.ddpm_beta_schedule,
-            prediction_type=args.prediction_type,
+            num_train_timesteps= args.ddpm_num_steps,
+            beta_schedule= args.ddpm_beta_schedule,
+            prediction_type= args.prediction_type,
         )
     else:
         noise_scheduler = DDPMScheduler(num_train_timesteps=args.ddpm_num_steps, beta_schedule=args.ddpm_beta_schedule)
