@@ -1,0 +1,8 @@
+__pycache__
+.ipynb*
+generated/
+model/
+out/
+data/
+concat_data/
+omega-k-og.py
