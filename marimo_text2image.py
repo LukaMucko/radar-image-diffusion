@@ -1,6 +1,6 @@
 import marimo
 
-__generated_with = "0.7.12"
+__generated_with = "0.7.14"
 app = marimo.App(width="medium")
 
 
@@ -21,7 +21,7 @@ def __(StableDiffusionPipeline):
 
 
 @app.cell
-def __(PIL, dataclass, mo, text):
+def __(PIL, dataclass, mo):
     @dataclass
     class Prompt():
         text: str
@@ -30,7 +30,7 @@ def __(PIL, dataclass, mo, text):
     @dataclass
     class imagegen():
         image: PIL.Image
-        prompt: text
+        prompt: str
 
     get_prompts, set_prompts = mo.state([])
     get_images, set_images = mo.state([])
@@ -121,24 +121,32 @@ def __(mo, prompt_list):
 
 
 @app.cell
-def __(get_prompts, imagegen, mo, pipeline, set_images):
-    generate_images_button = mo.ui.button(label="generate", on_change=lambda _: generate())
+def __(get_prompts, imagegen, mo, np, pipeline, set_images):
+    generate_images_button = mo.ui.run_button(label="generate", on_change=lambda _: generate())
+    clear_images_button = mo.ui.button(label="Clear images", on_change=lambda _: set_images([]))
+    get_gen, set_gen = mo.state(False)
 
     def generate():
         images = []
         prompts = [p.text for p in get_prompts()]
-        for i in mo.status.progress_bar(range(len(prompts)), title="Generating",
-        show_eta=True,
-        show_rate=True
-        ):
-            images.append(pipeline(prompts[i], height=256, width=256, num_inference_steps=100)[0][0])
-        set_images([imagegen(im.convert("L"), prompt) for im, prompt in zip(images, prompts)])
-    return generate, generate_images_button
+        for _ in mo.status.progress_bar([0], title="Generating..."):
+            images = pipeline(prompts, height=256, width=256, num_inference_steps=100)[0]
+        images = [imagegen(prompt=text, image=mo.image(np.array(im.convert("L")))) for text, im in zip(prompts, images)]
+        set_images(lambda v: v + images if v else images)
+        mo.output.clear()
+    return (
+        clear_images_button,
+        generate,
+        generate_images_button,
+        get_gen,
+        set_gen,
+    )
 
 
 @app.cell
-def __(get_images, mo, np):
-    grid = mo.vstack([[im.prompt, mo.image(np.array(im.image), alt=im.prompt)] for im in get_images()], align="center", justify="space-between")
+def __(clear_images_button, get_images, mo):
+    mo.stop(not get_images())
+    grid = mo.vstack([clear_images_button, [[im.prompt, im.image] for im in get_images()]], align="center", justify="space-between")
     grid
     return grid,
 
