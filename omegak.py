@@ -14,7 +14,7 @@ def process_gbsar_data(filename, step_size=0.01, gbsar_direction="L", tsweep=155
         if filename.size != (1024, 60):
             filename = filename.resize((60,1024))
         filename = np.array(filename).astype(np.float32)/255.
-        filename = np.flip(filename, 1)
+        #filename = np.flip(filename, 1)
         data = np.rot90(np.array(filename), 3)
 
     c = 3e8  # speed of light [m/s]
@@ -101,7 +101,7 @@ def process_gbsar_data(filename, step_size=0.01, gbsar_direction="L", tsweep=155
     final_radar_image = final_radar_image[480:520, 300:480]
     
     # Visualization
-    visualize(final_radar_image)
+    #visualize(final_radar_image)
     
     return final_radar_image
 
